@@ -5,34 +5,63 @@ on:
     branches: ['master']
   pull_request:
     branches: ['master']
+  workflow_dispatch:
+    inputs:
+      publish_packages:
+        type: boolean
+        default: false
+        description: "Publish packages to Github registry"
 
 jobs:
   build:
+    permissions:
+      packages: write
+      id-token: write
     runs-on: ubuntu-latest
     env:
       CI: false
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
-      - run: npm ci
+          cache: 'yarn'
+      - run: yarn install
 
       - name: 'Lint'
-        run: npm run lint
+        run: yarn run lint
 
       - name: 'Production Build'
-        run: npm run build
+        run: yarn run build
 
       - name: 'Generation Tests'
-        run: npm run test
+        run: yarn run test
+
+      - name: Pack the package
+        run: yarn pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: package.tgz
+          if-no-files-found: error
+          compression-level: 9
+
+      - name: Publish the package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_packages == true }}
+        run: yarn npm publish --access public --provenance

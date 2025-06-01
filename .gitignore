@@ -3,3 +3,9 @@ node_modules/
 output/*.js
 output/*.ts
 dist
+
+.yarn/install-state.gz
+.DS_Store
+._*
+*.log
+*.tgz
