@@ -22,5 +22,5 @@ export default defineConfig({
     lib: { entry: ['./src/cli.ts', './src/tspegjs.ts'], formats: ['es', 'cjs'] },
     rollupOptions: { external: [/^node:/, 'peggy', 'ts-morph', /^prettier/] }
   },
-  test: { globals: true, testTimeout: 25000 }
+  test: { globals: true, testTimeout: 25000, silent: false }
 });

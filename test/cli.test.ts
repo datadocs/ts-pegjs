@@ -3,14 +3,23 @@ import * as fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
-import { exec as execNode } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import peggy from 'peggy';
+
+function exec(cmd: string[]): { stdout?: string; stderr: string } {
+  const p = spawnSync(cmd[0], cmd.slice(1), {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const stderr = p.stderr?.toString() || '';
+  if (p.error) return { stderr: p.error.message + '\n' + stderr };
+  if (p.status !== 0) return { stderr: `${cmd[0]} exits with the code ${p.status}\n` + stderr };
+  return { stderr: '' };
+}
 
 // Local imports
 import packageJson from '../package.json';
-
-const exec = promisify(execNode);
 
 const ROOT_DIR = fileURLToPath(new URL('../', import.meta.url));
 const PLUGIN_PATH = path.join(ROOT_DIR, packageJson.exports.require);
@@ -22,23 +31,41 @@ const outTsName = path.join(ROOT_DIR, 'output/st2.ts');
 describe('CLI Tests', () => {
   beforeEach(ensureCliIsBuilt);
   it(`Can import tspegjs as a Peggy plugin`, async () => {
-    const { stdout, stderr } = await exec(
-      `npx peggy --plugin "${PLUGIN_PATH}" --extra-options-file "${OPTIONS_FILE}" --allowed-start-rules groupFile,templateFile,templateFileRaw,templateAndEOF -o "${outTsName}" "${GRAMMAR_FILE}"`
-    );
+    const { stdout, stderr } = exec([
+      `npx`,
+      `peggy`,
+      `--plugin`,
+      PLUGIN_PATH,
+      `--extra-options-file`,
+      OPTIONS_FILE,
+      '--allowed-start-rules',
+      'groupFile,templateFile,templateFileRaw,templateAndEOF',
+      '-o',
+      outTsName,
+      GRAMMAR_FILE
+    ]);
     if (stderr) {
       throw new Error(stderr);
     }
   });
   it.concurrent(`Generated \`ts\` file passes eslint check`, async () => {
-    const { stdout, stderr } = await exec(`eslint "${outTsName}"`);
+    const { stdout, stderr } = exec([`eslint`, outTsName]);
+
     if (stderr) {
       throw new Error(stderr);
     }
   });
   it.concurrent(`Can compile \`ts\` file to \`js\``, async () => {
-    const { stdout, stderr } = await exec(
-      `tsc --target es6 --module commonjs --declaration "${outTsName}"`
-    );
+    const { stdout, stderr } = exec([
+      `tsc`,
+      `--target`,
+      `es6`,
+      `--module`,
+      `commonjs`,
+      `--declaration`,
+      outTsName
+    ]);
+
     if (stderr) {
       throw new Error(stderr);
     }
@@ -49,21 +76,35 @@ describe('CLI Tests', () => {
     const barSource = path.join(ROOT_DIR, 'examples/bar.ts');
     const barDest = path.join(ROOT_DIR, 'output/bar.ts');
     // Copy the dependency to the output directory
-    await exec(`cp "${barSource}" "${barDest}"`);
+    exec(['cp', barSource, barDest]);
     {
       // Create the parser
-      const { stdout, stderr } = await exec(
-        `npx peggy --plugin "${PLUGIN_PATH}" --dependency foo:./bar -o "${outTsName}" "${GRAMMAR_FILE}"`
-      );
+      const { stdout, stderr } = exec([
+        `npx`,
+        `peggy`,
+        `--plugin`,
+        PLUGIN_PATH,
+        `--dependency`,
+        `foo:./bar`,
+        `-o`,
+        outTsName,
+        GRAMMAR_FILE
+      ]);
       if (stderr) {
         throw new Error(stderr);
       }
     }
     {
       // Compile the parser
-      const { stdout, stderr } = await exec(
-        `tsc --target es6 --module commonjs --declaration "${outTsName}"`
-      );
+      const { stdout, stderr } = exec([
+        `tsc`,
+        `--target`,
+        `es6`,
+        `--module`,
+        `commonjs`,
+        `--declaration`,
+        outTsName
+      ]);
       if (stderr) {
         throw new Error(stderr);
       }
