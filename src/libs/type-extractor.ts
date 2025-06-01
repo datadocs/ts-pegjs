@@ -1,7 +1,7 @@
 import type { ast } from 'peggy';
 import * as peggy from 'peggy';
-import * as prettierPluginTypescript from 'prettier/parser-typescript';
-import prettier from 'prettier/standalone';
+import * as prettierPluginTypescript from 'prettier/parser-typescript.js';
+import prettier from 'prettier/standalone.js';
 import { Project, ScriptTarget, ts } from 'ts-morph';
 import { getUniqueName, isKeyword } from './get-unique-name';
 import {

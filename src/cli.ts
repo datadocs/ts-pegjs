@@ -2,6 +2,8 @@
 
 import * as fs from 'node:fs';
 import * as process from 'node:process';
+import "prettier/parser-typescript.js";
+import "prettier/standalone.js";
 import peggy, { ParserBuildOptions } from 'peggy';
 import tspegjs from './tspegjs';
 import { version } from '../package.json';

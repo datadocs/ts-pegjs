@@ -1,4 +1,6 @@
 import type { Config } from 'peggy';
+import "prettier/parser-typescript.js";
+import "prettier/standalone.js";
 import { generateParser } from './passes/generate-ts';
 import { TsPegjsParserBuildOptions } from './types';
 
